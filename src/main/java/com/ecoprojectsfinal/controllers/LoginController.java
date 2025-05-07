@@ -11,13 +11,14 @@ import org.springframework.web.bind.annotation.RestController;
 
 @RequiredArgsConstructor
 @RestController
-@RequestMapping("loginDto")
+@RequestMapping("login")
 public class LoginController {
 
     private final LoginService service;
 
     @PostMapping
     public LoginResponseDto login(@RequestBody LoginRequestDto dto) {
+
         return service.authenticate(dto);
     }
 

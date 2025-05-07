@@ -1,34 +1,37 @@
 package com.ecoprojectsfinal.services.loginServices;
 
+import com.ecoprojectsfinal.configs.JwtComponent;
 import com.ecoprojectsfinal.dtos.loginDto.LoginRequestDto;
 import com.ecoprojectsfinal.dtos.loginDto.LoginResponseDto;
-import com.ecoprojectsfinal.services.userServices.UserService;
+import com.ecoprojectsfinal.entities.User;
 import lombok.RequiredArgsConstructor;
-import org.springframework.security.core.userdetails.UserDetails;
-import org.springframework.security.core.userdetails.UsernameNotFoundException;
-import org.springframework.security.crypto.password.PasswordEncoder;
+import org.springframework.security.authentication.AuthenticationManager;
+import org.springframework.security.authentication.BadCredentialsException;
+import org.springframework.security.authentication.UsernamePasswordAuthenticationToken;
+import org.springframework.security.core.Authentication;
 import org.springframework.stereotype.Service;
-
-import java.util.Base64;
 
 @Service
 @RequiredArgsConstructor
 public class LoginServiceImpl implements LoginService {
 
-    private final PasswordEncoder encoder;
-    private final UserService userService;
+    private final JwtComponent jwtConfig;
+    private final AuthenticationManager authenticationManager;
 
     @Override
     public LoginResponseDto authenticate(LoginRequestDto dto) {
-        UserDetails user = userService.loadUserByUsername(dto.getUsername());
-        if (!encoder.matches(dto.getPassword(), user.getPassword())) {
-            throw new UsernameNotFoundException(user.getUsername());
+        Authentication authentication = authenticationManager.authenticate(
+                new UsernamePasswordAuthenticationToken(
+                        dto.getUsername(), dto.getPassword()
+                )
+        );
+
+        if (authentication == null || !authentication.isAuthenticated()) {
+            throw new BadCredentialsException("Invalid username or password");
         }
 
-        String token = dto.getUsername() + ":" + dto.getPassword();
-        token = Base64.getEncoder().encodeToString(token.getBytes());
-
-        return LoginResponseDto.builder().type("Basic").token(token).build();
+        User user = (User) authentication.getPrincipal();
+        String token = jwtConfig.generateToken(user);
+        return LoginResponseDto.builder().type("Bearer").token(token).build();
     }
-
 }
